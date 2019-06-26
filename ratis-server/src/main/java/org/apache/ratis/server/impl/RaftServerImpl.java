@@ -439,7 +439,9 @@ public class RaftServerImpl implements RaftServerProtocol, RaftServerAsynchronou
       if (cacheEntry != null && cacheEntry.isCompletedNormally()) {
         return cacheEntry.getReplyFuture();
       }
-      return RetryCache.failWithException(new LeaderNotReadyException(getId()), entry);
+      final RaftClientReply reply = new RaftClientReply(request,
+          new LeaderNotReadyException(getId()), getCommitInfos());
+      return RetryCache.failWithReply(reply, entry);
     }
     return null;
   }
@@ -451,9 +453,8 @@ public class RaftServerImpl implements RaftServerProtocol, RaftServerAsynchronou
     RaftPeerId leaderId = state.getLeaderId();
     if (leaderId == null || leaderId.equals(state.getSelfId())) {
       // No idea about who is the current leader. Or the peer is the current
-      // leader, but it is about to step down
-      RaftPeer suggestedLeader = getRaftConf().getRandomPeer(state.getSelfId());
-      leaderId = suggestedLeader == null ? null : suggestedLeader.getId();
+      // leader, but it is about to step down. set the suggested leader as null.
+      leaderId = null;
     }
     RaftConfiguration conf = getRaftConf();
     Collection<RaftPeer> peers = conf.getPeers();

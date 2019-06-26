@@ -64,7 +64,8 @@ public abstract class BaseServer implements Closeable {
     long leaderElectionTimeoutMinVal = getLeaderElectionTimeoutMin();
     TimeDuration leaderElectionTimeoutMin = TimeDuration.valueOf(leaderElectionTimeoutMinVal,
       TimeUnit.MILLISECONDS);
-    RaftServerConfigKeys.Rpc.setTimeoutMin(properties, leaderElectionTimeoutMin);
+    RaftServerConfigKeys.Rpc.setTimeoutMin(properties,
+        leaderElectionTimeoutMin);
     long leaderElectionTimeoutMaxVal = getLeaderElectionTimeoutMax();
 
     TimeDuration leaderElectionMaxTimeout = TimeDuration.valueOf(

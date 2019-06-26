@@ -309,7 +309,7 @@ final class RaftClientImpl implements RaftClient {
    */
   RaftClientReply handleNotLeaderException(RaftClientRequest request, RaftClientReply reply,
       Consumer<RaftClientRequest> handler) {
-    if (reply == null) {
+    if (reply == null || reply.getException() instanceof LeaderNotReadyException) {
       return null;
     }
     final NotLeaderException nle = reply.getNotLeaderException();
@@ -364,12 +364,14 @@ final class RaftClientImpl implements RaftClient {
     }
     LOG.debug("{}: oldLeader={},  curLeader={}, newLeader={}", clientId, oldLeader, curLeader, newLeader);
 
-    final boolean changeLeader = newLeader != null && stillLeader;
-    final boolean reconnect = changeLeader || clientRpc.shouldReconnect(ioe);
+    final boolean changeLeader = !(ioe instanceof AlreadyClosedException || ioe instanceof TimeoutIOException)
+            && newLeader != null && stillLeader;
+    final boolean reconnect = changeLeader || clientRpc.shouldReconnect(ioe) || peers.size() == 1;
     if (reconnect) {
-      try(AutoCloseableLock writeLock = writeLock()) {
+      try (AutoCloseableLock writeLock = writeLock()) {
         if (changeLeader && oldLeader.equals(leaderId)) {
-          LOG.debug("{}: change Leader from {} to {}", clientId, oldLeader, newLeader);
+          LOG.debug("{} {}: client change Leader from {} to {} ex={}", groupId,
+              clientId, oldLeader, newLeader, ioe.getClass().getName());
           this.leaderId = newLeader;
         }
         clientRpc.handleException(oldLeader, ioe, reconnect);
